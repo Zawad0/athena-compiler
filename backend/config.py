@@ -28,6 +28,7 @@ OUTPUT_CAP_BYTES = 64 * 1024   # 64 KB
 # 100 KB is way more than any lecture-exercise program needs.
 # This is enforced in app.py *before* touching the filesystem.
 MAX_SOURCE_BYTES = 100_000
+MAX_INPUT_BYTES = 100 * 1024
 
 # Server binding
 

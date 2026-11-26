@@ -114,7 +114,7 @@ def _compile(cfg: LanguageConfig, tmp_dir: str) -> Optional[dict]:
 #    Document this in the report's "isolation limits" section.
 # =============================================================
 
-def _run_with_cap(cfg: LanguageConfig, tmp_dir: str) -> dict:
+def _run_with_cap(cfg: LanguageConfig, tmp_dir: str, stdin_text: str = "") -> dict:
     """
     Run the program and collect output up to OUTPUT_CAP_BYTES per stream.
 
@@ -126,6 +126,7 @@ def _run_with_cap(cfg: LanguageConfig, tmp_dir: str) -> dict:
     proc = subprocess.Popen(
         cfg.run_cmd,
         cwd=tmp_dir,
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -134,7 +135,10 @@ def _run_with_cap(cfg: LanguageConfig, tmp_dir: str) -> dict:
     )
 
     try:
-        raw_out, raw_err = proc.communicate(timeout=cfg.run_timeout)
+        raw_out, raw_err = proc.communicate(
+            input=stdin_text,
+            timeout=cfg.run_timeout
+        )
         truncated = len(raw_out) > cap or len(raw_err) > cap
         return {
             "stdout":     raw_out[:cap],
@@ -196,7 +200,7 @@ def _result(
 #  Never raises — all errors are caught and returned as dicts.
 # =============================================================
 
-def run_code(language: str, source: str) -> dict:
+def run_code(language: str, source: str, stdin_text: str = "") -> dict:
     """
     Compile and run `source` written in `language`.
 
@@ -235,7 +239,7 @@ def run_code(language: str, source: str) -> dict:
 
         # 5. Run the program and time it
         t_start = time.monotonic()
-        run = _run_with_cap(cfg, tmp_dir)
+        run = _run_with_cap(cfg, tmp_dir, stdin_text)
         duration_ms = int((time.monotonic() - t_start) * 1000)
 
         # 6. Classify the outcome
