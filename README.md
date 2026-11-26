@@ -28,7 +28,7 @@ sudo usermod -aG docker $USER   # then log out and back in
 
 ## Setup and run (all platforms)
 ```bash
-git clone git@github.com:Zawad0/athena-compiler.git
+git clone https://github.com/Zawad0/athena-compiler.git
 cd athena-compiler
 uv sync         # creates .venv and installs locked dependencies
 uv run backend/app.py  # runs flask locally
