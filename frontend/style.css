@@ -216,7 +216,6 @@ header h1 span {
   padding: 14px 16px 14px 16px;
   font: 14px/1.6 var(--mono);
   tab-size: 4;
-  spellcheck: false;
   outline: none;
   transition: border-color 0.2s;
 }
