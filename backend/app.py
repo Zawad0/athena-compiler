@@ -59,6 +59,19 @@ def api_run():
 
     language = data.get("language")
     source   = data.get("source")
+    stdin_text = data.get("input", "")
+
+    if not isinstance(stdin_text, str):
+        return jsonify(
+            status="bad_request",
+            message="Input must be a string"
+        ), 400
+
+    if len(stdin_text.encode("utf-8")) > config.MAX_INPUT_BYTES:
+        return jsonify(
+            status="bad_request",
+            message=f"Input exceeds {config.MAX_INPUT_BYTES} bytes"
+        ), 400
 
     if language not in ALLOWED_LANGUAGES:
         return jsonify(status="bad_request",
@@ -73,7 +86,7 @@ def api_run():
                        message=f"Source exceeds {config.MAX_SOURCE_BYTES} bytes"), 400
 
     # --- Delegate to runner (never raises) ---
-    result = run_code(language, source)
+    result = run_code(language, source, stdin_text)
 
     # runner.py returns a dict; jsonify turns it into an HTTP response.
     return jsonify(result)
