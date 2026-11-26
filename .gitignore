@@ -1,0 +1,19 @@
+# Python / uv
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+tmp/
+jobs/
+
+# editors
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Logs and local env files
+*.log
+.env

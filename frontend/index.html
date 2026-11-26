@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Online Code Runner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: system-ui, sans-serif; background:#1e1e2e; color:#cdd6f4; margin:0; padding:24px; }
+  main { max-width: 900px; margin: 0 auto; }
+  h1 { margin-top:0; font-size:1.4rem; }
+  .bar { display:flex; gap:12px; margin-bottom:12px; }
+  select, button { font-size:1rem; padding:8px 14px; border-radius:6px; border:0; }
+  button { background:#89b4fa; color:#1e1e2e; cursor:pointer; font-weight:600; }
+  button:disabled { opacity:.5; cursor:wait; }
+  textarea { width:100%; height:320px; box-sizing:border-box; background:#181825; color:#cdd6f4;
+             border:1px solid #45475a; border-radius:6px; padding:12px;
+             font: 14px/1.4 ui-monospace, monospace; tab-size:4; }
+  pre { background:#11111b; border-radius:6px; padding:12px; min-height:120px; white-space:pre-wrap; overflow:auto; }
+  .status { margin:12px 0 4px; font-weight:600; }
+  .ok { color:#a6e3a1; } .bad { color:#f38ba8; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Online Code Runner</h1>
+  <div class="bar">
+    <select id="lang">
+      <option value="c">C</option>
+      <option value="cpp">C++</option>
+      <option value="java">Java</option>
+    </select>
+    <button id="run">Run</button>
+  </div>
+  <textarea id="code" spellcheck="false">#include &lt;stdio.h&gt;
+
+int main() {
+    printf("Hello\n");
+    return 0;
+}</textarea>
+  <div class="status" id="status"></div>
+  <pre id="output"></pre>
+</main>
+
+<script>
+const runBtn = document.getElementById("run");
+const statusEl = document.getElementById("status");
+const outputEl = document.getElementById("output");
+
+runBtn.addEventListener("click", async () => {
+  runBtn.disabled = true;
+  statusEl.textContent = "Running...";
+  statusEl.className = "status";
+  outputEl.textContent = "";
+  try {
+    // Relative URL: works on whatever host/port served this page.
+    const res = await fetch("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        language: document.getElementById("lang").value,
+        source: document.getElementById("code").value,
+      }),
+    });
+    const r = await res.json();
+    statusEl.textContent = "Status: " + r.status +
+      (r.exit_code !== undefined ? " (exit " + r.exit_code + ")" : "");
+    statusEl.className = "status " + (r.status === "success" ? "ok" : "bad");
+    // textContent (not innerHTML) so program output can never inject HTML.
+    outputEl.textContent = [r.message, r.compile_output, r.stdout, r.stderr]
+      .filter(Boolean).join("\n");
+  } catch (err) {
+    statusEl.textContent = "Could not reach the server";
+    statusEl.className = "status bad";
+  } finally {
+    runBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
