@@ -56,16 +56,9 @@ header {
 .logo {
   width: 36px;
   height: 36px;
-  /* Simple SVG-free logo: coloured square with Greek A */
-  background: var(--blue);
   border-radius: 8px;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  font-size: 1.2rem;
-  color: var(--crust);
+  object-fit: contain;   /* keeps the PNG aspect ratio, no cropping */
   flex-shrink: 0;
-  user-select: none;
 }
 
 header h1 {
@@ -341,6 +334,60 @@ pre.output-pre.stderr-out  { color: color-mix(in srgb, var(--red) 80%, var(--tex
   height: 140px;
   color: var(--overlay);
   font-size: 0.9rem;
+}
+
+/* ---------- CodeMirror overrides ----------
+   CodeMirror injects its own <div class="CodeMirror"> to replace
+   the <textarea>.  We override its structural styles to match our
+   design (borders, sizing, font).  Syntax colours come from the
+   Dracula theme CDN file — we leave those alone.
+   ----------------------------------------- */
+
+.CodeMirror {
+  /* Match our editor area look */
+  height: auto;
+  min-height: 320px;
+  background: var(--mantle);
+  border: 1px solid var(--surface0);
+  border-radius: var(--radius);
+  font: 14px/1.6 var(--mono);
+  transition: border-color 0.2s;
+  /* Dracula theme sets its own text colour; we keep it */
+}
+
+/* Blue border on focus — same as the plain textarea had */
+.CodeMirror-focused {
+  border-color: var(--blue);
+}
+
+/* Gutter (line numbers column) */
+.CodeMirror-gutters {
+  background: var(--mantle);         /* same as editor background */
+  border-right: 1px solid var(--surface0);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.CodeMirror-linenumber {
+  color: var(--overlay);             /* dim, unobtrusive */
+  padding: 0 10px 0 6px;
+}
+
+/* Text cursor */
+.CodeMirror-cursor {
+  border-left: 2px solid var(--text);
+}
+
+/* Selection highlight */
+.CodeMirror-selected {
+  background: var(--surface0) !important;
+}
+.CodeMirror-focused .CodeMirror-selected {
+  background: var(--surface1) !important;
+}
+
+/* Scroll area must also fill the min-height */
+.CodeMirror-scroll {
+  min-height: 316px;   /* slightly less than .CodeMirror min-height */
 }
 
 /* ---------- Footer ---------- */

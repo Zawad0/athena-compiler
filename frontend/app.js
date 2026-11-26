@@ -11,13 +11,22 @@
 //    server replies, just like blocking I/O but non-blocking.
 // =============================================================
 
-const { useState } = React;
+const { useState, useRef, useEffect } = React;
 
 // ----- Default starter code per language -----
 const STARTERS = {
   c: `#include <stdio.h>\n\nint main() {\n    printf("Hello from C!\\n");\n    return 0;\n}\n`,
   cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello from C++!" << endl;\n    return 0;\n}\n`,
   java: `public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from Java!");\n    }\n}\n`,
+};
+
+// ----- Maps CodeMirror mode strings per language -----
+// The "clike" script (loaded in index.html) handles all three.
+// These MIME types tell CodeMirror which dialect to highlight.
+const CM_MODE = {
+  c:    "text/x-csrc",
+  cpp:  "text/x-c++src",
+  java: "text/x-java",
 };
 
 // ----- Maps API status → badge CSS class + human label -----
@@ -38,7 +47,7 @@ const STATUS_META = {
 function Header() {
   return (
     <header>
-      <div className="logo" aria-hidden="true">Λ</div>
+      <img className="logo" src="favicon.png" alt="Athena Compiler logo" />
       <h1>Athena <span>Compiler</span></h1>
       <span className="header-sub">C · C++ · Java</span>
     </header>
@@ -189,25 +198,56 @@ function OutputPanel({ result }) {
 // =============================================================
 function App() {
   const [lang,   setLang]   = useState("c");
-  const [source, setSource] = useState(STARTERS["c"]);
   const [result, setResult] = useState(null);
 
-  // When the user clicks a language tab:
-  // switch the tab AND load that language's starter code.
+  // textareaRef points to the real <textarea> DOM node.
+  // CodeMirror.fromTextArea() reads it on init and then hides it.
+  const textareaRef = useRef(null);
+
+  // cmRef holds the live CodeMirror instance so we can call its
+  // API (getValue, setValue, setOption) from event handlers.
+  // We use a ref (not state) because changing the CM instance
+  // should NOT trigger a React re-render.
+  const cmRef = useRef(null);
+
+  // --- Initialize CodeMirror once, after the first render ---
+  // useEffect with [] runs exactly once: after the component
+  // mounts and the <textarea> is in the DOM.
+  useEffect(() => {
+    cmRef.current = CodeMirror.fromTextArea(textareaRef.current, {
+      mode:          CM_MODE["c"],   // start in C mode
+      theme:         "dracula",      // dark theme loaded via CDN
+      lineNumbers:   true,           // show line numbers in the gutter
+      tabSize:       4,
+      indentWithTabs: false,         // Tab key inserts spaces, not \t
+      lineWrapping:  true,           // soft-wrap long lines
+      autofocus:     true,
+    });
+
+    // Seed the editor with the C starter code.
+    cmRef.current.setValue(STARTERS["c"]);
+  }, []);  // [] = "run once on mount, never again"
+
+  // When the user picks a different language tab:
+  //  1. Update React's lang state (re-renders the tab UI)
+  //  2. Tell CodeMirror to switch its highlighting mode
+  //  3. Load that language's starter code into the editor
+  //  4. Clear the old output panel
   function handleLangChange(newLang) {
     setLang(newLang);
-    setSource(STARTERS[newLang]);
-    setResult(null); // clear old output
+    if (cmRef.current) {
+      cmRef.current.setOption("mode", CM_MODE[newLang]);
+      cmRef.current.setValue(STARTERS[newLang]);
+    }
+    setResult(null);
   }
 
-  // Send source to the backend and display the result.
   async function handleRun() {
+    // Read the current editor text from CodeMirror, not from React state.
+    const source = cmRef.current ? cmRef.current.getValue() : "";
+
     setResult("loading");
     try {
-      // fetch() is the browser's built-in HTTP client.
-      // We POST to a relative URL (/api/run) so it always
-      // hits the same server that served this page — no
-      // hardcoded host or port needed.
       const res = await fetch("/api/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -216,7 +256,6 @@ function App() {
       const data = await res.json();
       setResult(data);
     } catch (err) {
-      // Network error (server not running, etc.)
       setResult({
         status: "internal_error",
         message: "Could not reach the server. Is the backend running?",
@@ -231,14 +270,16 @@ function App() {
       <Header />
 
       <main>
-        {/* Toolbar: language selector + run + clear */}
         <div className="toolbar">
           <LanguageTabs selected={lang} onSelect={handleLangChange} disabled={isLoading} />
           <RunButton loading={isLoading} onClick={handleRun} />
           <span className="spacer" />
           <button
             className="clear-btn"
-            onClick={() => { setSource(""); setResult(null); }}
+            onClick={() => {
+              if (cmRef.current) cmRef.current.setValue("");
+              setResult(null);
+            }}
             disabled={isLoading}
             title="Clear editor"
           >
@@ -246,40 +287,19 @@ function App() {
           </button>
         </div>
 
-        {/* Java reminder: class must be named Main */}
         {lang === "java" && (
           <div className="java-hint">
             ⚠ Java: your public class must be named <strong>Main</strong> (the backend saves it as <code>Main.java</code>).
           </div>
         )}
 
-        {/* Code editor */}
+        {/* CodeMirror wraps this textarea and replaces it with its
+            own editor div. The ref lets us pass the DOM node to
+            CodeMirror.fromTextArea() in useEffect above. */}
         <div className="editor-wrap">
-          <textarea
-            className="code-editor"
-            value={source}
-            onChange={e => setSource(e.target.value)}
-            spellCheck={false}
-            autoCapitalize="none"
-            autoCorrect="off"
-            aria-label="Source code editor"
-            // Let Tab insert 4 spaces instead of jumping to the next widget
-            onKeyDown={e => {
-              if (e.key === "Tab") {
-                e.preventDefault();
-                const { selectionStart: s, selectionEnd: end, value: v } = e.target;
-                const next = v.slice(0, s) + "    " + v.slice(end);
-                setSource(next);
-                // Restore cursor position after React re-renders
-                requestAnimationFrame(() => {
-                  e.target.selectionStart = e.target.selectionEnd = s + 4;
-                });
-              }
-            }}
-          />
+          <textarea ref={textareaRef} />
         </div>
 
-        {/* Output panel */}
         <OutputPanel result={result} />
       </main>
 
