@@ -36,3 +36,13 @@ MAX_INPUT_BYTES = 100 * 1024
 # be reachable from other machines on the network
 HOST = "127.0.0.1"
 PORT = 5000
+
+# Docker sandbox (optional)
+
+# Set to True after building the runner image (`docker build -t athena-runner .`).
+# When False, code compiles and runs directly on your host machine.
+USE_DOCKER = True
+DOCKER_IMAGE = "athena-runner"
+DOCKER_MEMORY = "256m"
+DOCKER_CPUS = "0.5"
+DOCKER_PIDS_LIMIT = 64
