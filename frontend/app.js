@@ -216,12 +216,17 @@ function App() {
   // mounts and the <textarea> is in the DOM.
   useEffect(() => {
     cmRef.current = CodeMirror.fromTextArea(textareaRef.current, {
-      mode:          CM_MODE["c"],   // start in C mode
-      theme:         "dracula",      // dark theme loaded via CDN
-      lineNumbers:   true,           // show line numbers in the gutter
+      mode:          CM_MODE["c"],
+      theme:         "dracula",
+      lineNumbers:   true,
+
+      indentUnit:    4,
       tabSize:       4,
-      indentWithTabs: false,         // Tab key inserts spaces, not \t
-      lineWrapping:  true,           // soft-wrap long lines
+      indentWithTabs: false,
+
+      autoCloseBrackets: true,
+
+      lineWrapping:  true,
       autofocus:     true,
     });
 
