@@ -35,8 +35,24 @@ uv run backend/app.py  # runs flask locally
 ```
 Open http://localhost:5000
 
-## Docker runner image
-*WILL BE ADDED SOON*
+## Docker runner image (optional sandbox)
+
+By default, Athena compiles and runs code directly on your host machine (`USE_DOCKER = False` in `backend/config.py`). To isolate execution inside a Docker container (no network, capped memory/CPU/PIDs, non-root user):
+
+1. **Build the runner image once** from the repo root (make sure Docker / Docker Desktop is running):
+   ```bash
+   docker build -t athena-runner .
+   ```
+2. **Enable Docker mode** in `backend/config.py`:
+   ```python
+   USE_DOCKER = True
+   ```
+3. **Run the server as usual:**
+   ```bash
+   uv run backend/app.py
+   ```
+
+> **Note:** On Linux, being in the `docker` group is equivalent to root access. Without Docker enabled, submitted code runs with your own OS user's permissions.
 
 ## Status
-Walking skeleton: returns a fake response. Real execution not implemented yet.
+C, C++, and Java compilation/execution and optional Docker sandboxing are implemented.

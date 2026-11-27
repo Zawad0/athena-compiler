@@ -40,6 +40,7 @@ from typing import Optional
 
 import config
 from languages import LANGUAGES, LanguageConfig
+import sandbox
 
 
 # =============================================================
@@ -226,6 +227,13 @@ def run_code(language: str, source: str, stdin_text: str = "") -> dict:
     tmp_dir = tempfile.mkdtemp(prefix="athena_")
 
     try:
+        # When running inside Docker as a non-root user, the container's
+        # user ID may differ from your host user ID.  Making this single
+        # ephemeral temp dir writable lets the container write compiled
+        # binaries into /work; it is deleted in `finally` right after.
+        if config.USE_DOCKER:
+            os.chmod(tmp_dir, 0o777)
+
         # 3. Write the source file
         source_path = os.path.join(tmp_dir, cfg.source_filename)
         with open(source_path, "w", encoding="utf-8") as f:
@@ -233,14 +241,29 @@ def run_code(language: str, source: str, stdin_text: str = "") -> dict:
 
         # 4. Compile (skip for interpreted languages with compile_cmd=None)
         if cfg.compile_cmd is not None:
-            compile_err = _compile(cfg, tmp_dir)
+            compile_err = (
+                sandbox.compile_in_docker(cfg, tmp_dir)
+                if config.USE_DOCKER
+                else _compile(cfg, tmp_dir)
+            )
             if compile_err:
                 return compile_err   # early return; finally still runs
 
         # 5. Run the program and time it
         t_start = time.monotonic()
-        run = _run_with_cap(cfg, tmp_dir, stdin_text)
+        run = (
+            sandbox.run_in_docker(cfg, tmp_dir, stdin_text)
+            if config.USE_DOCKER
+            else _run_with_cap(cfg, tmp_dir, stdin_text)
+        )
         duration_ms = int((time.monotonic() - t_start) * 1000)
+
+        if run.get("docker_error"):
+            return _result(
+                status="internal_error",
+                message=run["docker_error"],
+                duration_ms=duration_ms,
+            )
 
         # 6. Classify the outcome
         if run["timed_out"]:
